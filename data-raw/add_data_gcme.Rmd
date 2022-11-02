@@ -1,0 +1,298 @@
+---
+title: "Add data that was in GCME to MESI"
+author: "Beni Stocker"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+---
+
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)   # for working with ease
+```
+
+# Read data
+
+The MESI data.
+```{r message=FALSE}
+df <- read_csv("../data/mesi_main.csv")
+```
+
+The GCME data (from a version of the db obtained by Kevin on 2019 03 25, eported tabs as CSV and read here).
+```{r message=FALSE}
+df_gcme_data <- read_csv("../data-raw/table_var_exp_names_Data_tbl.csv")
+df_refs_gcme <- read_csv("../data-raw/table_var_exp_names_References.csv") %>% 
+  select(1:3) %>% 
+  select(exp = "Experiment Name", ref = "Reference", full_ref = "Full Reference")
+```
+
+# CO2 experiments
+
+## Root:shoot ratio
+
+The following is available in MESI.
+```{r}
+df %>% 
+  filter(treatment == "c") %>% 
+  filter(experiment_type == "field") %>% 
+  filter(response == "root_shoot_ratio") %>% 
+  group_by(exp) %>% 
+  summarise(n = sum(rep_c)) %>% 
+  knitr::kable()
+```
+
+Look for relevant GCME data from CO2-only experiments
+```{r}
+df_gcme_data %>% 
+  filter(`Data type` == "root-shoot ratio" |
+         `Data type` == "root:shoot (biomass)" |
+         `Data type` == "root:shoot ratio" ) %>% 
+  mutate(varnam = "root_shoot_ratio") %>% 
+  mutate(rep = as.numeric(`Measurement replicates`)) %>% 
+  rename(exp = `Experiment Name`) %>% 
+  filter(str_ends(exp, "_c") | str_detect(exp, "_c")) %>% 
+  group_by(exp) %>% 
+  summarise(n = sum(rep)) %>% 
+  left_join(
+    df_gcme_data %>% 
+      filter(`Data type` == "root-shoot ratio" |
+             `Data type` == "root:shoot (biomass)" |
+             `Data type` == "root:shoot ratio" ) %>% 
+      select(exp = "Experiment Name", ref = "Source Reference") %>% 
+      distinct(),
+    by = "exp"
+  ) %>% 
+  left_join(
+    df_refs_gcme,
+    by = c("exp", "ref")
+  ) %>% 
+  knitr::kable()
+```
+
+## Inorganic N 
+
+The following is available in MESI.
+```{r}
+df %>% 
+  filter(treatment == "c") %>% 
+  filter(experiment_type == "field") %>% 
+  filter(response %in% c("soil_no3-n", "soil_nh4-n", "soil_nh4", "soil_no3", "soil_solution_nh4", "soil_solution_no3")) %>% 
+  group_by(exp) %>% 
+  summarise(n = sum(rep_c)) %>% 
+  knitr::kable()
+```
+
+Look for relevant GCME data from CO2-only experiments
+```{r}
+df_gcme_data %>% 
+  filter(`Data type` %in% c("soil solution NO3-", "soil solution mineral N", "soil solution NH4+", "soil NH4+", "soil NH4-N", "soil NH4+-N", "soil NO3-N" , "soil nitrate" , "soil NO3-", "soil ammonium" )) %>% 
+  mutate(rep = as.numeric(`Measurement replicates`)) %>% 
+  rename(exp = `Experiment Name`) %>% 
+  filter(str_ends(exp, "_c") | str_detect(exp, "_c")) %>% 
+  group_by(exp) %>% 
+  summarise(n = sum(rep)) %>% 
+  left_join(
+    df_gcme_data %>% 
+      filter(`Data type` %in% c("soil solution NO3-", "soil solution mineral N", "soil solution NH4+", "soil NH4+", "soil NH4-N", "soil NH4+-N", "soil NO3-N" , "soil nitrate" , "soil NO3-", "soil ammonium" )) %>% 
+      select(exp = "Experiment Name", ref = "Source Reference") %>% 
+      distinct(),
+    by = "exp"
+  ) %>% 
+  left_join(
+    df_refs_gcme,
+    by = c("exp", "ref")
+  ) %>% 
+  knitr::kable()
+```
+
+## N uptake
+
+The following is available in MESI.
+```{r}
+df %>% 
+  filter(treatment == "c") %>% 
+  filter(experiment_type == "field") %>% 
+  filter(response %in% c("root_n_uptake", "root_nh4_uptake", "root_no3_uptake")) %>% 
+  group_by(exp) %>% 
+  summarise(n = sum(rep_c)) %>% 
+  knitr::kable()
+```
+
+Look for relevant GCME data from CO2-only experiments
+```{r}
+df_gcme_data %>% 
+  filter(`Data type` %in% c("N uptake", "NH4+ uptake", "NO3- uptake")) %>% 
+  mutate(rep = as.numeric(`Measurement replicates`)) %>% 
+  rename(exp = `Experiment Name`) %>% 
+  filter(str_ends(exp, "_c") | str_detect(exp, "_c")) %>% 
+  group_by(exp) %>% 
+  summarise(n = sum(rep)) %>% 
+  left_join(
+    df_gcme_data %>% 
+      filter(`Data type` %in% c("N uptake", "NH4+ uptake", "NO3- uptake")) %>% 
+      select(exp = "Experiment Name", ref = "Source Reference") %>% 
+      distinct(),
+    by = "exp"
+  ) %>% 
+  left_join(
+    df_refs_gcme,
+    by = c("exp", "ref")
+  ) %>% 
+  knitr::kable()
+```
+
+# N-fertilisation experiments
+
+For all variables listed below, may also get data from NutNet?
+
+## Root:shoot ratio
+
+The following is available in MESI.
+```{r}
+df %>% 
+  filter(treatment == "f") %>% 
+  filter(experiment_type == "field") %>% 
+  filter(response == "root_shoot_ratio") %>% 
+  group_by(exp) %>% 
+  summarise(n = sum(rep_c)) %>% 
+  knitr::kable()
+```
+
+Look for relevant GCME data from CO2-only experiments
+```{r}
+df_gcme_data %>% 
+  filter(`Data type` == "root-shoot ratio" |
+         `Data type` == "root:shoot (biomass)" |
+         `Data type` == "root:shoot ratio" ) %>% 
+  mutate(varnam = "root_shoot_ratio") %>% 
+  mutate(rep = as.numeric(`Measurement replicates`)) %>% 
+  rename(exp = `Experiment Name`) %>% 
+  filter(str_ends(exp, "_f") | str_detect(exp, "_f")) %>% 
+  group_by(exp) %>% 
+  summarise(n = sum(rep)) %>% 
+  left_join(
+    df_gcme_data %>% 
+      filter(`Data type` == "root-shoot ratio" |
+             `Data type` == "root:shoot (biomass)" |
+             `Data type` == "root:shoot ratio" ) %>% 
+      select(exp = "Experiment Name", ref = "Source Reference") %>% 
+      distinct(),
+    by = "exp"
+  ) %>% 
+  left_join(
+    df_refs_gcme,
+    by = c("exp", "ref")
+  ) %>% 
+  knitr::kable()
+```
+
+## Inorganic N 
+
+The following is available in MESI.
+```{r}
+df %>% 
+  filter(treatment == "f") %>% 
+  filter(experiment_type == "field") %>% 
+  filter(response %in% c("soil_no3-n", "soil_nh4-n", "soil_nh4", "soil_no3", "soil_solution_nh4", "soil_solution_no3")) %>% 
+  group_by(exp) %>% 
+  summarise(n = sum(rep_c)) %>% 
+  knitr::kable()
+```
+
+Look for relevant GCME data from CO2-only experiments
+```{r}
+df_gcme_data %>% 
+  filter(`Data type` %in% c("soil solution NO3-", "soil solution mineral N", "soil solution NH4+", "soil NH4+", "soil NH4-N", "soil NH4+-N", "soil NO3-N" , "soil nitrate" , "soil NO3-", "soil ammonium" )) %>% 
+  mutate(rep = as.numeric(`Measurement replicates`)) %>% 
+  rename(exp = `Experiment Name`) %>% 
+  filter(str_ends(exp, "_f") | str_detect(exp, "_f")) %>% 
+  group_by(exp) %>% 
+  summarise(n = sum(rep)) %>% 
+  left_join(
+    df_gcme_data %>% 
+      filter(`Data type` %in% c("soil solution NO3-", "soil solution mineral N", "soil solution NH4+", "soil NH4+", "soil NH4-N", "soil NH4+-N", "soil NO3-N" , "soil nitrate" , "soil NO3-", "soil ammonium" )) %>% 
+      select(exp = "Experiment Name", ref = "Source Reference") %>% 
+      distinct(),
+    by = "exp"
+  ) %>% 
+  left_join(
+    df_refs_gcme,
+    by = c("exp", "ref")
+  ) %>% 
+  knitr::kable()
+```
+
+## BGB
+
+The following is available in MESI.
+```{r}
+df %>% 
+  filter(treatment == "f") %>% 
+  filter(experiment_type == "field") %>% 
+  filter(response %in% c("bgb", "fine_root_biomass")) %>% 
+  group_by(exp) %>% 
+  summarise(n = sum(rep_c)) %>% 
+  knitr::kable()
+```
+
+Look for relevant GCME data from CO2-only experiments
+```{r}
+df_gcme_data %>% 
+  filter(`Data type` %in% c("belowground biomass",  "belowground biomass C", "belowground C", "root C")) %>% 
+  mutate(rep = as.numeric(`Measurement replicates`)) %>% 
+  rename(exp = `Experiment Name`) %>% 
+  filter(str_detect(exp, "_f")) %>% 
+  group_by(exp) %>% 
+  summarise(n = sum(rep)) %>% 
+  left_join(
+    df_gcme_data %>% 
+      filter(`Data type` %in% c("belowground biomass",  "belowground biomass C", "belowground C", "root C")) %>% 
+      select(exp = "Experiment Name", ref = "Source Reference") %>% 
+      distinct(),
+    by = "exp"
+  ) %>% 
+  left_join(
+    df_refs_gcme,
+    by = c("exp", "ref")
+  ) %>% 
+  knitr::kable()
+```
+
+## BNPP
+
+The following is available in MESI.
+```{r}
+df %>% 
+  filter(treatment == "f") %>% 
+  filter(experiment_type == "field") %>% 
+  filter(response %in% c("root_production", "fine_root_production", "root_production")) %>% 
+  group_by(exp) %>% 
+  summarise(n = sum(rep_c)) %>% 
+  knitr::kable()
+```
+
+Look for relevant GCME data from CO2-only experiments
+```{r}
+df_gcme_data %>% 
+  filter(`Data type` %in% c("Fine root production", "fine root production", "BNPP" )) %>% 
+  mutate(rep = as.numeric(`Measurement replicates`)) %>% 
+  rename(exp = `Experiment Name`) %>% 
+  filter(str_detect(exp, "_f")) %>% 
+  group_by(exp) %>% 
+  summarise(n = sum(rep)) %>% 
+  left_join(
+    df_gcme_data %>% 
+      filter(`Data type` %in% c("Fine root production", "fine root production", "BNPP" )) %>% 
+      select(exp = "Experiment Name", ref = "Source Reference") %>% 
+      distinct(),
+    by = "exp"
+  ) %>% 
+  left_join(
+    df_refs_gcme,
+    by = c("exp", "ref")
+  ) %>% 
+  knitr::kable()
+```
+
