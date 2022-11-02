@@ -1,0 +1,143 @@
+---
+title: "Add data from Liang et al. to MESI"
+author: "Beni Stocker"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+---
+
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)   # for working with ease
+```
+
+# Read data
+
+The MESI data.
+```{r message=FALSE}
+df <- read_csv("../data/mesi_main.csv")
+```
+
+The Liang et al. data can be obtained as an Excel file from here: https://doi.org/10.1111/gcb.15071. I first exported each excel tab to a separate CSV file and then combined them into a single big table. Respective code is commented out below and the combined file is read directly.
+```{r}
+# files <- list.files(path = "~/data/nfert_liang/data_csv/", full.names = TRUE)
+# df <- purrr::map_dfr(as.list(files), ~read_csv(.))
+# use_names <- c(
+#   "variable",           "reference",          "lat",                "lon",                "mat",               
+#   "map",                "ph_soil",            "species",            "family",             "genus",             
+#   "photopathway",       "legume",             "managed",            "growthform",         "functionaltype",    
+#   "broadleaf_conifer",  "evergreen_deciduous","ninorg_form",        "ndep_kg_ha_yr",      "duration_yr",       
+#   "load",               "value_t",            "value_c",            "n_t",                "n_c",               
+#   "sd_t",               "sd_c",               "ln_rr",              "v",                  "w",                 
+#   "cluster",            "w_dash"
+#   )
+# names(df) <- use_names
+# write_csv(df, file = "~/data/nfert_liang/nfert_liang_combined.csv")
+  
+# modify nfert_liang_combined.csv by hand to have nice column names.
+df_liang <- read_csv("../data-raw/nfert_liang_combined.csv")
+```
+
+Example for how the two look like (Nmass).
+
+MESI:
+```{r}
+df %>% 
+  filter(response == "leaf_n") %>% 
+  head() %>% 
+  knitr::kable()
+```
+
+Liang et al.:
+```{r}
+df_liang %>% 
+  filter(variable == "Nmass") %>% 
+  head()
+```
+
+The goal is to make the Liang et al. data (more) conform with MESI. Different steps need to be taken:
+
+## Simple reformatting of column names and entries.
+
+```{r}
+# ## look at growth growth forms in Liang and in MESI
+# df$growthform %>% unique()
+# df$growth_form %>% unique()
+
+mesi_make_conform_liang <- function(df_liang){
+  
+  df_liang <- df_liang %>% 
+    
+    ## add columns
+    mutate(db = "liang",
+           treatment = "f") %>% 
+    
+    ## Correct weird longitude and latitude specification
+    mutate(lon = ifelse(str_ends(lon, "W"), -as.numeric(str_remove(lon, "W")), as.numeric(str_remove(lon, "W"))),
+           lat = ifelse(str_ends(lat, "N"), as.numeric(str_remove(lat, "N")), -as.numeric(str_remove(lat, "N")))) %>% 
+    
+    ## Some columns can just be renamed
+    rename(citation = reference,
+           response = variable,
+           x_c = value_c,
+           x_t = value_t,
+           rep_c = n_c,
+           rep_t = n_t,
+           growth_form = growthform
+           ) %>% 
+    
+    ## Entries have to conform the entries in MESI.
+    ## ... for growth form
+    mutate(growth_form = ifelse("Woody", # Liang name
+                                "woody", # MESI name
+                                ifelse("Herb",      # Liang name
+                                       "herbaceous" # MESI name
+                                       )))
+  
+    ## .. for variable name
+    ## XXX add your code here or find equivalent solution XXX
+    
+}
+
+df_liang <- mesi_make_conform_liang(df_liang)
+```
+
+## Add info
+
+Missing info in Liang et al.:
+
+- elevation (`elv`). May use ingestr R package (see here: https://computationales.github.io/ingestr/articles/example.html#etopo1). 
+
+## Identify duplicates
+
+This is challenging. Here are some starting points.
+
+Based on strings (e.g., experiment name):
+
+- https://www.statology.org/fuzzy-matching-in-r/
+- https://stackoverflow.com/questions/62858568/fuzzy-match-across-columns-in-r
+
+Or it could be done based on longitude and latitude of the site (but missing for many!). This gives an idea of how a solution could be found, but this doesn't show any duplicates.
+```{r}
+df_liang %>% 
+  select(citation, lon, lat) %>%
+  distinct() %>% 
+  
+  ## round to two digits
+  mutate(lon = format(lon, digits = 2), lat = format(lat, digits = 2)) %>% 
+  
+  ## join with MESI based on lon and lat rounded to two digits
+  left_join(
+    df %>% 
+      select(site, exp, citation, lon, lat) %>% 
+      mutate(lon = format(lon, digits = 2), lat = format(lat, digits = 2)) %>% 
+      distinct(),
+    by = c("lon", "lat")
+  ) %>% 
+  drop_na(site, exp) %>% 
+  knitr::kable()
+```
+
+
