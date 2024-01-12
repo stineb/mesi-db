@@ -108,7 +108,7 @@ df_liang <- mesi_make_conform_liang(df_liang)
 
 Missing info in Liang et al.:
 
-- elevation (`elv`). May use ingestr R package (see here: https://computationales.github.io/ingestr/articles/example.html#etopo1). 
+- elevation (`elv`). May use ingestr R package (see here: https://geco-bern.github.io/ingestr/articles/example.html#etopo1). 
 
 ## Identify duplicates
 
